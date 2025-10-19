@@ -1,10 +1,9 @@
 ﻿// Import the functions you need from the SDKs you need
-import { initializeApp } from firebase / app;
-import { getAuth } from firebase / auth;
-import { getAnalytics } from firebase / analytics;
+import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAUmqScOqy_LHxcSX_TgWfkSAcjB_PlkNU",
   authDomain: "oral-cancer-detection-c0209.firebaseapp.com",
