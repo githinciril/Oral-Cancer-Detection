@@ -1,25 +1,58 @@
 
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { auth } from '../firebaseConfig.js';
 
 export default function HomeScreen({ navigation }) {
+  const [displayName, setDisplayName] = useState('Guest');
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (!user) {
+        setDisplayName('Guest');
+        return;
+      }
+      // If user is anonymous, show GUEST (all caps)
+      if (user.isAnonymous) {
+        setDisplayName('GUEST');
+        return;
+      }
+      // Otherwise use displayName or email
+      const name = user.displayName || user.email || 'Guest';
+      setDisplayName(name.charAt(0).toUpperCase() + name.slice(1));
+    });
+    return unsubscribe;
+  }, []);
+
   const onGetStarted = () => {
     navigation?.navigate?.('Explore') || alert('Get Started');
   };
 
   const onLogout = () => {
-    navigation?.replace?.('Login');
+    // Sign out from Firebase then navigate to Login
+    auth
+      .signOut()
+      .then(() => {
+        navigation?.replace?.('Login');
+      })
+      .catch(err => {
+        console.error('Sign out error', err);
+        Alert.alert('Sign out failed', err.message || String(err));
+        // Still navigate to Login as fallback
+        navigation?.replace?.('Login');
+      });
   };
 
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri: 'https://ui-avatars.com/api/?name=Guest&length=5&background=007AFF&color=fff&size=256&font-size=0.2&bold=true' }}
+        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.charAt(0))}&background=007AFF&color=fff&size=256&font-size=0.3&bold=true` }}
         style={styles.avatar}
       />
 
-      <Text style={styles.title}>Oral Cancer Detect</Text>
-      <Text style={styles.subtitle}>A minimal demo home</Text>
-
+  <Text style={styles.title}>Oral Cancer Detect</Text>
+  <Text style={styles.subtitle}>{displayName}</Text>
+      
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Did you know?</Text>
         <Text style={styles.cardText}>Early detection increases survival rates. Explore resources and tools in this app.</Text>

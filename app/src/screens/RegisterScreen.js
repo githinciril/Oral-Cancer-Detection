@@ -1,18 +1,20 @@
 // src/screens/RegisterScreen.js
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { auth } from '../firebaseConfig.js';
 
 export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
     if (!email.trim()) return 'Enter an email';
     if (!/^\S+@\S+\.\S+$/.test(email)) return 'Enter a valid email';
     if (password.length < 6) return 'Password must be at least 6 characters';
+    if (!username.trim()) return 'Enter a username';
     return null;
   };
 
@@ -25,9 +27,17 @@ export default function RegisterScreen({ navigation }) {
     setLoading(true);
     try {
       console.log('Registering', email);
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
-      console.log('Registration successful, navigating to Home');
-      navigation.replace('Home');
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      console.log('UserCredential:', userCredential);
+      // Set displayName to username
+      await updateProfile(userCredential.user, { displayName: username.trim() });
+      console.log('Profile updated');
+      // Send email verification
+      await sendEmailVerification(userCredential.user);
+      console.log('Email verification sent');
+      Alert.alert('Success', 'Account created! Please check your email for verification before logging in.');
+      console.log('Registration successful, navigating to Login');
+      navigation.replace('Login');
     } catch (e) {
       console.error('Registration error', e);
       Alert.alert('Registration error', e.message || String(e));
@@ -39,6 +49,7 @@ export default function RegisterScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create account</Text>
+      <TextInput placeholder="Username" value={username} onChangeText={setUsername} style={styles.input} autoCapitalize="none" />
       <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={styles.input} autoCapitalize="none" />
       <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={styles.input} secureTextEntry />
       <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleRegister} disabled={loading}>
