@@ -1,28 +1,30 @@
 
+import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { auth } from '../firebaseConfig.js';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { auth } from '../lib/firebaseConfig.js';
+
 
 export default function HomeScreen({ navigation }) {
-  const [displayName, setDisplayName] = useState('Guest');
+  // Keep the current Firebase user object so we can render avatar reliably
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
-      if (!user) {
-        setDisplayName('Guest');
-        return;
-      }
-      // If user is anonymous, show GUEST (all caps)
-      if (user.isAnonymous) {
-        setDisplayName('GUEST');
-        return;
-      }
-      // Otherwise use displayName or email
-      const name = user.displayName || user.email || 'Guest';
-      setDisplayName(name.charAt(0).toUpperCase() + name.slice(1));
+      setCurrentUser(user || null);
     });
     return unsubscribe;
   }, []);
+
+  // Compute display name / avatar text derived from the user
+  const getDisplayName = () => {
+    if (!currentUser) return 'Guest';
+    if (currentUser.isAnonymous) return 'GUEST';
+    const name = currentUser.displayName || currentUser.email || 'Guest';
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
+  const displayName = getDisplayName();
 
   const onGetStarted = () => {
     navigation?.navigate?.('Explore') || alert('Get Started');
@@ -45,10 +47,18 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Image
-        source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.charAt(0))}&background=007AFF&color=fff&size=256&font-size=0.3&bold=true` }}
-        style={styles.avatar}
-      />
+      {currentUser?.photoURL ? (
+        <Image source={{ uri: currentUser.photoURL }} style={styles.avatar} />
+      ) : currentUser?.isAnonymous ? (
+        <View style={[styles.avatar, styles.guestAvatar]}> 
+          <Text style={styles.guestText}>GUEST</Text>
+        </View>
+      ) : (
+        // Signed-in user without photo or no user: show initial (first letter) or fallback
+        <View style={[styles.avatar, styles.initialsAvatar]}> 
+          <Text style={styles.guestText}>{(displayName && displayName.charAt(0)) || 'G'}</Text>
+        </View>
+      )}
 
   <Text style={styles.title}>Oral Cancer Detect</Text>
   <Text style={styles.subtitle}>{displayName}</Text>
@@ -83,6 +93,23 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     marginBottom: 16,
     backgroundColor: '#eee',
+    overflow: 'hidden',
+  },
+  guestAvatar: {
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initialsAvatar: {
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+    letterSpacing: 1,
   },
   title: {
     fontSize: 22,
